@@ -62,7 +62,7 @@ export default async function AdminUsuariosPage() {
                      <div className="flex flex-col">
                         <span className="font-bold text-slate-900 dark:text-white flex items-center gap-2">
                            {user.nome} 
-                           {user.role === 'admin' && <ShieldCheck className="w-4 h-4 text-secondary" title="Administrador" />}
+                           {user.role === 'admin' && <span title="Administrador"><ShieldCheck className="w-4 h-4 text-secondary" /></span>}
                         </span>
                         <div className="text-xs text-slate-500 mt-0.5 flex items-center gap-1.5 font-mono">
                            {user.cpf || 'CPF Oculto'} <span className="text-slate-300 dark:text-slate-700">|</span> <Mail className="w-3 h-3" /> {user.email}
