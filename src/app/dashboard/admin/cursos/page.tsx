@@ -2,6 +2,8 @@ import Link from "next/link";
 import { Plus, Edit2, Archive, Search, CheckCircle2 } from "lucide-react";
 import { createClient } from "@/utils/supabase/server";
 
+export const dynamic = 'force-dynamic';
+
 export default async function AdminCursosPage() {
   const supabase = await createClient();
 

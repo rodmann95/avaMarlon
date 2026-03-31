@@ -3,6 +3,8 @@ import { notFound } from "next/navigation";
 import { PlayCircle, Clock, BookOpen, Lock, CheckCircle2, Video, FileText, Paperclip, CheckSquare, ChevronDown } from "lucide-react";
 import { createClient } from "@/utils/supabase/server";
 
+export const dynamic = 'force-dynamic';
+
 export default async function DetalheCursoPage({ params }: { params: { id: string } }) {
   const supabase = await createClient();
   const { id } = await params;

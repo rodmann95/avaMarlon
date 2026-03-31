@@ -3,6 +3,8 @@ import { notFound } from "next/navigation";
 import { createClient } from "@/utils/supabase/server";
 import { CheckCircle2, Lock, ArrowLeft, Clock, Map as MapIcon, PlayCircle } from "lucide-react";
 
+export const dynamic = 'force-dynamic';
+
 export default async function TrilhaDetailPage({ params }: { params: { id: string } }) {
   const supabase = await createClient();
   const { id } = await params;

@@ -2,6 +2,8 @@ import Link from "next/link";
 import { Search, Filter, ShieldCheck, Mail, ArrowRight } from "lucide-react";
 import { createClient } from "@/utils/supabase/server";
 
+export const dynamic = 'force-dynamic';
+
 export default async function AdminUsuariosPage() {
   const supabase = await createClient();
 

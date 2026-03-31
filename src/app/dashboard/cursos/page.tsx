@@ -2,9 +2,7 @@ import Link from "next/link";
 import { Search, Filter, BookOpen, Clock, PlayCircle } from "lucide-react";
 import { createClient } from "@/utils/supabase/server";
 
-export const metadata = {
-  title: "Cursos | EduFormação",
-};
+export const dynamic = 'force-dynamic';
 
 export default async function CursosIndexPage() {
   const supabase = await createClient();

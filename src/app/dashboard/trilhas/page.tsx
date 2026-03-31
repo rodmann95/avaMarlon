@@ -2,9 +2,7 @@ import Link from "next/link";
 import { createClient } from "@/utils/supabase/server";
 import { Map, Clock, BookOpen, Search, Filter } from "lucide-react";
 
-export const metadata = {
-  title: "Trilhas Formativas | EduFormação",
-};
+export const dynamic = 'force-dynamic';
 
 export default async function TrilhasIndexPage() {
   const supabase = await createClient();
