@@ -1,21 +1,21 @@
 {
-    "name": "EduFormação SEMED",
-    "short_name": "EduFormação",
-    "description": "Sistema de Ambiente Virtual de Aprendizagem de Colombo/PR",
-    "start_url": "/dashboard",
-    "display": "standalone",
-    "background_color": "#0F172A",
-    "theme_color": "#1B4F72",
-    "icons": [
-      {
-        "src": "https://raw.githubusercontent.com/marlongast/supafiles/main/icon-192x192.png",
-        "sizes": "192x192",
-        "type": "image/png"
-      },
-      {
-        "src": "https://raw.githubusercontent.com/marlongast/supafiles/main/icon-512x512.png",
-        "sizes": "512x512",
-        "type": "image/png"
-      }
-    ]
-  }
+  "name": "EduFormação SEMED",
+  "short_name": "EduFormação",
+  "description": "Plataforma de Formação Continuada - SME Colombo/PR",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0F172A",
+  "theme_color": "#1E8449",
+  "icons": [
+    {
+      "src": "/icons/icon-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/icons/icon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}

@@ -2,83 +2,60 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { 
   PlayCircle, FileText, CheckCircle2, Lock, ArrowLeft, 
   ArrowRight, Menu, X, Video, Paperclip, CheckSquare,
-  Clock, AlertTriangle, ShieldCheck, XCircle, RefreshCcw
+  Clock, AlertTriangle, ShieldCheck, XCircle, RefreshCcw, Loader2
 } from "lucide-react";
+import { createClient } from "@/utils/supabase/client";
 
 // ==========================================
-// COMPONENTE SECUNDÁRIO: MOTOR DO QUIZ
+// COMPONENTE: MOTOR DO QUIZ (DINÂMICO)
 // ==========================================
-function QuizRunner({ onAprovar }: { onAprovar: () => void }) {
+function QuizRunner({ avaliacao, onAprovar }: { avaliacao: any, onAprovar: (nota: number) => void }) {
   const [iniciado, setIniciado] = useState(false);
   const [perguntaAtual, setPerguntaAtual] = useState(0);
-  const [respostas, setRespostas] = useState<Record<number, string>>({});
+  const [respostas, setRespostas] = useState<Record<string, string>>({});
   const [finalizado, setFinalizado] = useState(false);
   const [nota, setNota] = useState(0);
 
-  const mockProva = {
-    titulo: "Avaliação de Conhecimento - Módulo 1",
-    tempo_limite: 15, // minutos
-    nota_minima: 70,
-    questoes: [
-      {
-        id: "q1",
-        enunciado: "Qual é o principal objetivo da visão sistêmica na gestão escolar?",
-        tipo: "multipla",
-        alternativas: [
-           { id: "a1", texto: "Focar em um único problema isolado de um aluno." },
-           { id: "a2", texto: "Compreender a escola como um ecossistema com partes interligadas.", correta: true },
-           { id: "a3", texto: "Terceirizar a gestão financeira do município." },
-        ]
-      },
-      {
-        id: "q2",
-        enunciado: "O Diretor moderno não deve delegar tarefas burocráticas.",
-        tipo: "vf",
-        alternativas: [
-           { id: "v1", texto: "Verdadeiro" },
-           { id: "f1", texto: "Falso", correta: true },
-        ]
-      }
-    ]
-  };
+  if (!avaliacao || !avaliacao.questoes) return <div className="p-8 text-center text-slate-400">Avaliação não configurada.</div>;
 
   const calcularNota = () => {
     let acertos = 0;
-    mockProva.questoes.forEach((q, index) => {
-       const respSelecionada = respostas[index];
-       const altCorreta = q.alternativas.find(a => a.correta)?.id;
+    avaliacao.questoes.forEach((q: any) => {
+       const respSelecionada = respostas[q.id];
+       const altCorreta = q.alternativas.find((a: any) => a.correta)?.id;
        if (respSelecionada === altCorreta) acertos++;
     });
-    const final = (acertos / mockProva.questoes.length) * 100;
+    const final = (acertos / avaliacao.questoes.length) * 100;
     setNota(final);
     setFinalizado(true);
-    if (final >= mockProva.nota_minima) {
-       onAprovar(); // Destrava conclusao e certificado
+    if (final >= (avaliacao.nota_minima || 70)) {
+       onAprovar(final);
     }
   };
 
   if (!iniciado) {
     return (
-      <div className="flex flex-col items-center justify-center p-8 bg-white dark:bg-slate-900 h-full w-full rounded-[2rem]">
+      <div className="flex flex-col items-center justify-center p-8 bg-white dark:bg-slate-900 h-full w-full rounded-[2rem] border border-slate-200 dark:border-slate-800 shadow-xl">
          <CheckSquare className="w-16 h-16 text-primary mb-6" />
-         <h2 className="text-2xl font-black text-slate-900 dark:text-white mb-2">{mockProva.titulo}</h2>
-         <p className="text-slate-500 mb-6 max-w-md text-center">
-           Esta é uma atividade obrigatória. Você precisa atingir {mockProva.nota_minima}% para avançar na trilha.
+         <h2 className="text-2xl font-black text-slate-900 dark:text-white mb-2">{avaliacao.titulo}</h2>
+         <p className="text-slate-500 mb-6 max-w-md text-center font-medium">
+           Esta é uma atividade obrigatória. Você precisa atingir {avaliacao.nota_minima || 70}% para avançar na trilha.
          </p>
          
          <div className="flex gap-4 mb-8">
             <div className="flex items-center gap-2 bg-slate-50 dark:bg-slate-800 px-4 py-2 rounded-xl text-sm font-bold text-slate-600 dark:text-slate-300">
-               <Clock className="w-4 h-4" /> {mockProva.tempo_limite} min
+               <Clock className="w-4 h-4" /> {avaliacao.tempo_limite_min || 15} min
             </div>
             <div className="flex items-center gap-2 bg-slate-50 dark:bg-slate-800 px-4 py-2 rounded-xl text-sm font-bold text-slate-600 dark:text-slate-300">
-               <FileText className="w-4 h-4" /> {mockProva.questoes.length} Questões
+               <FileText className="w-4 h-4" /> {avaliacao.questoes.length} Questões
             </div>
          </div>
 
-         <button onClick={() => setIniciado(true)} className="px-8 py-4 bg-primary text-white rounded-xl font-black shadow-lg hover:shadow-xl hover:bg-primary/90 transition-all text-lg flex items-center gap-2">
+         <button onClick={() => setIniciado(true)} className="px-10 py-4 bg-primary text-white rounded-2xl font-black shadow-lg hover:shadow-xl hover:bg-primary/90 transition-all text-lg flex items-center gap-2 hover:scale-105">
             Iniciar Avaliação
          </button>
       </div>
@@ -86,86 +63,90 @@ function QuizRunner({ onAprovar }: { onAprovar: () => void }) {
   }
 
   if (finalizado) {
-    const aprovado = nota >= mockProva.nota_minima;
+    const aprovado = nota >= (avaliacao.nota_minima || 70);
     return (
-      <div className="flex flex-col items-center justify-center p-8 bg-white dark:bg-slate-900 h-full w-full rounded-[2rem] text-center">
+      <div className="flex flex-col items-center justify-center p-8 bg-white dark:bg-slate-900 h-full w-full rounded-[2rem] text-center border-2 border-slate-100 dark:border-slate-800 shadow-2xl">
          {aprovado ? (
-           <ShieldCheck className="w-20 h-20 text-green-500 mb-6" />
+           <div className="bg-emerald-500/10 p-6 rounded-3xl mb-6">
+             <ShieldCheck className="w-20 h-20 text-emerald-500" />
+           </div>
          ) : (
-           <XCircle className="w-20 h-20 text-red-500 mb-6" />
+           <div className="bg-red-500/10 p-6 rounded-3xl mb-6">
+             <XCircle className="w-20 h-20 text-red-500" />
+           </div>
          )}
          
-         <h2 className="text-3xl font-black text-slate-900 dark:text-white mb-2">
-            {aprovado ? "Aprovado!" : "Você não atingiu a média."}
+         <h2 className="text-3xl font-black text-slate-900 dark:text-white mb-2 uppercase tracking-tight">
+            {aprovado ? "Aprovado!" : "Tente Novamente"}
          </h2>
-         <p className="text-slate-500 mb-8 max-w-md">
-            Sua nota final foi <span className="font-black text-slate-800 dark:text-slate-200">{nota}%</span> (Mínimo requerido: {mockProva.nota_minima}%).
+         <p className="text-slate-500 mb-8 max-w-md font-bold">
+            Sua nota final foi <span className={aprovado ? "text-emerald-500 text-2xl" : "text-red-500 text-2xl"}>{Math.round(nota)}%</span>
          </p>
 
          {!aprovado && (
-           <button onClick={() => { setIniciado(false); setFinalizado(false); setRespostas({}); setPerguntaAtual(0); }} className="px-6 py-3 bg-red-50 dark:bg-red-900/20 text-red-600 border border-red-200 dark:border-red-800 rounded-xl font-bold hover:bg-red-100 transition-all flex items-center gap-2">
-              <RefreshCcw className="w-4 h-4" /> Tentar Novamente
+           <button onClick={() => { setIniciado(false); setFinalizado(false); setRespostas({}); setPerguntaAtual(0); }} className="px-8 py-4 bg-slate-900 text-white rounded-2xl font-bold hover:bg-slate-800 transition-all flex items-center gap-2 shadow-lg">
+              <RefreshCcw className="w-5 h-5" /> Tentar Outra Vez
            </button>
          )}
       </div>
     );
   }
 
-  const q = mockProva.questoes[perguntaAtual];
+  const q = avaliacao.questoes[perguntaAtual];
 
   return (
-    <div className="flex flex-col p-8 bg-white dark:bg-slate-900 h-full w-full rounded-[2rem] transition-all relative overflow-y-auto">
+    <div className="flex flex-col p-8 bg-white dark:bg-slate-900 h-full w-full rounded-[2rem] transition-all relative overflow-hidden border border-slate-200 dark:border-slate-800 shadow-2xl">
        <div className="flex justify-between items-center mb-8 pb-4 border-b border-slate-100 dark:border-slate-800 absolute top-8 left-8 right-8 bg-white dark:bg-slate-900 z-10">
-          <span className="font-bold text-slate-400 uppercase tracking-widest text-xs">Questão {perguntaAtual + 1} de {mockProva.questoes.length}</span>
-          <span className="flex items-center gap-2 text-primary font-bold bg-primary/10 px-3 py-1 rounded-lg text-sm">
-             <Clock className="w-4 h-4" /> 14:59s
+          <span className="font-black text-slate-400 uppercase tracking-widest text-[10px]">Questão {perguntaAtual + 1} de {avaliacao.questoes.length}</span>
+          <span className="flex items-center gap-2 text-primary font-black bg-primary/10 px-4 py-2 rounded-xl text-xs uppercase">
+             <Clock className="w-4 h-4" /> {avaliacao.tempo_limite_min || 15}:00
           </span>
        </div>
 
-       <div className="flex-1 mt-20 mb-24 max-w-3xl mx-auto w-full">
-          <h3 className="text-2xl font-black text-slate-800 dark:text-slate-100 mb-8 leading-snug">
+       <div className="flex-1 mt-24 mb-24 max-w-3xl mx-auto w-full overflow-y-auto pr-2 custom-scrollbar">
+          <h3 className="text-2xl md:text-3xl font-black text-slate-800 dark:text-slate-100 mb-10 leading-tight">
              {q.enunciado}
           </h3>
 
           <div className="space-y-4">
-             {q.alternativas.map((alt) => {
-               const isSelected = respostas[perguntaAtual] === alt.id;
+             {q.alternativas.map((alt: any) => {
+               const isSelected = respostas[q.id] === alt.id;
                return (
-                 <label key={alt.id} className={`flex items-center gap-4 p-5 rounded-2xl border-2 cursor-pointer transition-all ${isSelected ? 'border-primary bg-primary/5' : 'border-slate-100 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-600'}`}>
-                    <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center flex-shrink-0 ${isSelected ? 'border-primary bg-primary' : 'border-slate-300 dark:border-slate-700'}`}>
-                       {isSelected && <div className="w-2.5 h-2.5 bg-white rounded-full"></div>}
+                 <label key={alt.id} className={`flex items-center gap-5 p-6 rounded-2xl border-2 cursor-pointer transition-all ${isSelected ? 'border-primary bg-primary/5 shadow-md -translate-y-1' : 'border-slate-100 dark:border-slate-800 hover:border-slate-200 dark:hover:border-slate-700'}`}>
+                    <div className={`w-7 h-7 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-all ${isSelected ? 'border-primary bg-primary' : 'border-slate-300 dark:border-slate-700'}`}>
+                       {isSelected && <div className="w-3 h-3 bg-white rounded-full"></div>}
                     </div>
-                    <span className="font-medium text-slate-700 dark:text-slate-300">{alt.texto}</span>
+                    <span className={`font-bold transition-colors ${isSelected ? 'text-primary' : 'text-slate-600 dark:text-slate-400'}`}>{alt.texto}</span>
                  </label>
                )
              })}
           </div>
        </div>
 
-       <div className="absolute bottom-8 left-8 right-8 bg-white dark:bg-slate-900 flex justify-between pt-4 border-t border-slate-100 dark:border-slate-800">
+       <div className="absolute bottom-8 left-8 right-8 bg-white dark:bg-slate-900 flex justify-between pt-6 border-t border-slate-100 dark:border-slate-800">
           <button 
              onClick={() => setPerguntaAtual(prev => Math.max(0, prev - 1))}
              disabled={perguntaAtual === 0}
-             className="px-6 py-3 font-bold text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-xl disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+             className="px-7 py-3.5 font-black text-slate-400 hover:text-slate-900 dark:hover:text-white uppercase tracking-widest text-[11px] disabled:opacity-30 transition-all"
           >
-             Voltar
+             Anterior
           </button>
           
-          {perguntaAtual < mockProva.questoes.length - 1 ? (
+          {perguntaAtual < avaliacao.questoes.length - 1 ? (
              <button 
                 onClick={() => setPerguntaAtual(prev => prev + 1)}
-                disabled={!respostas[perguntaAtual]}
-                className="px-8 py-3 bg-secondary text-white rounded-xl font-bold flex items-center gap-2 disabled:bg-slate-300 disabled:cursor-not-allowed hover:bg-secondary/90 transition-all shadow-md"
+                disabled={!respostas[q.id]}
+                className="px-10 py-4 bg-slate-900 text-white rounded-2xl font-black uppercase tracking-widest text-xs flex items-center gap-2 disabled:bg-slate-200 disabled:text-slate-400 transition-all shadow-lg"
              >
-                Avançar <ArrowRight className="w-4 h-4" />
+                Próxima <ArrowRight className="w-5 h-5" />
              </button>
           ) : (
              <button 
                 onClick={calcularNota}
-                disabled={!respostas[perguntaAtual]}
-                className="px-8 py-3 bg-primary text-white rounded-xl font-bold flex items-center gap-2 disabled:bg-slate-300 disabled:cursor-not-allowed hover:bg-primary/90 transition-all shadow-md"
+                disabled={!respostas[q.id]}
+                className="px-10 py-4 bg-primary text-white rounded-2xl font-black uppercase tracking-widest text-xs flex items-center gap-2 disabled:bg-slate-200 disabled:text-slate-400 transition-all shadow-lg"
              >
-                Finalizar Prova <CheckCircle2 className="w-4 h-4" />
+                Finalizar <CheckCircle2 className="w-5 h-5" />
              </button>
           )}
        </div>
@@ -178,32 +159,107 @@ function QuizRunner({ onAprovar }: { onAprovar: () => void }) {
 // COMPONENTE PRINCIPAL: PLAYER PAGE
 // ==========================================
 export default function AulaPlayerPage({ params }: { params: { id: string, aulaId: string } }) {
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [concluida, setConcluida] = useState(false);
-  const [loading, setLoading] = useState(false);
+  const router = useRouter();
+  const supabase = createClient();
   
-  // MOCK DATA
-  const cursoMock = { id: params.id, titulo: "Liderança e Gestão Escolar" };
-  const aulaAtual = {
-    id: params.aulaId,
-    titulo: "Atividade Final de Fixação",
-    tipo: "atividade", // AGORA É UMA ATIVIDADE TESTE
-    conteudo_url: "", 
-    duracao_minutos: 15,
-  };
+  const [loading, setLoading] = useState(true);
+  const [curso, setCurso] = useState<any>(null);
+  const [aula, setAula] = useState<any>(null);
+  const [modulos, setModulos] = useState<any[]>([]);
+  const [avaliacao, setAvaliacao] = useState<any>(null);
+  
+  const [concluida, setConcluida] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [savingProgress, setSavingProgress] = useState(false);
 
-  const proximaAula = { id: "aula-2", bloqueada: !concluida };
-  const aulaAnterior = { id: "mock" }; 
+  useEffect(() => {
+    async function loadData() {
+      setLoading(true);
+      
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
 
-  const arvoreModulos = [
-    {
-      id: "mod-1", titulo: "Módulo 1: Avaliações Vivas",
-      aulas: [
-        { id: params.aulaId, titulo: "Atividade Final de Fixação", concluida: concluida, tipo: "atividade" },
-        { id: "aula-2", titulo: "Conclusão e Certificado", concluida: false, tipo: "texto" }
-      ]
+      // 1. Busca Curso, Módulos e Aulas
+      const { data: cursoData } = await supabase
+        .from('cursos')
+        .select(`
+          id, titulo,
+          modulos (
+            id, titulo, ordem,
+            aulas (id, titulo, tipo, duracao_minutos, ordem)
+          )
+        `)
+        .eq('id', params.id)
+        .single();
+      
+      if (cursoData) {
+        setCurso(cursoData);
+        // Ordenação
+        const sortedModulos = cursoData.modulos.sort((a: any, b: any) => a.ordem - b.ordem);
+        sortedModulos.forEach((m: any) => m.aulas.sort((a: any, b: any) => a.ordem - b.ordem));
+        setModulos(sortedModulos);
+      }
+
+      // 2. Busca Aula Atual e eventual Avaliação
+      const { data: aulaData } = await supabase
+        .from('aulas')
+        .select(`
+          *,
+          avaliacoes (*)
+        `)
+        .eq('id', params.aulaId)
+        .single();
+      
+      if (aulaData) {
+        setAula(aulaData);
+        if (aulaData.tipo === 'atividade' && aulaData.avaliacoes?.[0]) {
+           // Busca questões da avaliação
+           const { data: questoes } = await supabase
+             .from('questoes')
+             .select('*, alternativas(*)')
+             .eq('avaliacao_id', aulaData.avaliacoes[0].id)
+             .order('ordem');
+           
+           setAvaliacao({ ...aulaData.avaliacoes[0], questoes });
+        }
+      }
+
+      // 3. Busca status de conclusão real
+      const { data: prog } = await supabase
+        .from('progresso_aulas')
+        .select('concluida')
+        .eq('user_id', user.id)
+        .eq('aula_id', params.aulaId)
+        .single();
+      
+      if (prog) setConcluida(prog.concluida);
+
+      setLoading(false);
     }
-  ];
+
+    loadData();
+  }, [params.id, params.aulaId]);
+
+  const handleMarcarConcluido = async (notaQuiz?: number) => {
+    setSavingProgress(true);
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+
+    const { error } = await supabase
+      .from('progresso_aulas')
+      .upsert({
+        user_id: user.id,
+        aula_id: params.aulaId,
+        concluida: true,
+        concluida_em: new Date().toISOString(),
+        percentual_assistido: 100
+      }, { onConflict: 'user_id, aula_id' });
+
+    if (!error) {
+      setConcluida(true);
+    }
+    setSavingProgress(false);
+  };
 
   const getIconPorTipo = (tipo: string, w="w-4", h="h-4") => {
     switch(tipo) {
@@ -215,83 +271,60 @@ export default function AulaPlayerPage({ params }: { params: { id: string, aulaI
     }
   };
 
-  const marcarComoConcluido = () => {
-    if(aulaAtual.tipo === 'atividade') return; // Quizzes tem regra própria
-    setLoading(true);
-    setTimeout(() => {
-      setConcluida(true);
-      setLoading(false);
-    }, 800);
-  };
+  if (loading) {
+    return (
+      <div className="fixed inset-0 flex flex-col items-center justify-center bg-slate-900 z-[100]">
+         <Loader2 className="w-12 h-12 animate-spin text-primary mb-4" />
+         <span className="text-white font-black uppercase tracking-widest text-sm">Carregando sala de aula...</span>
+      </div>
+    );
+  }
 
   return (
-    <div className="fixed inset-0 z-50 flex flex-col md:flex-row bg-slate-50 dark:bg-slate-950">
+    <div className="fixed inset-0 z-50 flex flex-col md:flex-row bg-slate-50 dark:bg-slate-950 overflow-hidden">
       
-      {/* HEADER MOBILE */}
-      <div className="md:hidden flex items-center justify-between bg-slate-900 border-b border-slate-800 p-4 text-white z-20">
-        <div className="flex items-center gap-3 w-[80%]">
-          <Link href={`/dashboard/cursos/${cursoMock.id}`} className="text-slate-400 hover:text-white">
-            <ArrowLeft className="w-5 h-5" />
-          </Link>
-          <h1 className="text-sm font-bold truncate">{cursoMock.titulo}</h1>
-        </div>
-        <button onClick={() => setMobileMenuOpen(!mobileMenuOpen)} className="p-2 text-slate-300 hover:text-white bg-slate-800 rounded-lg">
-          {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
-        </button>
-      </div>
-
-      {/* SIDEBAR DE MODULOS */}
+      {/* SIDEBAR (Desktop e Mobile Overflow) */}
       <aside className={`
-        ${mobileMenuOpen ? "flex" : "hidden"} 
-        absolute md:relative top-16 md:top-0 left-0 w-full md:w-80 h-[calc(100vh-64px)] md:h-full 
-        bg-slate-900 md:flex flex-col border-r border-slate-800 z-10 transition-transform
+        ${mobileMenuOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"} 
+        absolute md:relative top-0 left-0 w-80 h-full bg-slate-900 flex flex-col border-r border-slate-800 z-50 transition-transform duration-300 shadow-2xl
       `}>
-        <div className="hidden md:flex flex-col p-6 border-b border-slate-800 text-white flex-shrink-0">
-          <Link href={`/dashboard/cursos/${cursoMock.id}`} className="flex items-center gap-2 text-slate-400 hover:text-white text-sm font-medium mb-4 transition-colors w-fit">
-            <ArrowLeft className="w-4 h-4" /> Voltar ao Curso
-          </Link>
-          <h2 className="font-bold text-lg leading-tight line-clamp-2">{cursoMock.titulo}</h2>
-          
-          <div className="mt-4 bg-slate-800 rounded-full h-1.5 w-full overflow-hidden">
-            <div className="bg-primary h-full rounded-full" style={{ width: concluida ? '50%' : '10%' }}></div>
-          </div>
-          <p className="text-slate-400 text-xs mt-2 text-right">{concluida ? '50%' : '10%'} concluído</p>
+        <div className="p-6 border-b border-slate-800 flex flex-col">
+          <button 
+            onClick={() => router.push(`/dashboard/cursos/${params.id}`)}
+            className="flex items-center gap-2 text-slate-400 hover:text-white text-[11px] font-black uppercase tracking-widest mb-6 transition-colors w-fit"
+          >
+            <ArrowLeft className="w-4 h-4" /> Painel do Curso
+          </button>
+          <h2 className="font-black text-white text-xl leading-tight line-clamp-2">{curso?.titulo}</h2>
         </div>
 
-        <div className="flex-1 overflow-y-auto p-4 space-y-4">
-          {arvoreModulos.map((mod, mIndex) => (
-            <div key={mod.id} className="space-y-1">
-              <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wider pl-2 mb-2">
+        <div className="flex-1 overflow-y-auto p-4 space-y-6 custom-scrollbar-dark">
+          {modulos.map((mod) => (
+            <div key={mod.id} className="space-y-2">
+              <h3 className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] pl-3 mb-3">
                 {mod.titulo}
               </h3>
               <ul className="space-y-1">
-                {mod.aulas.map((aula, aIndex) => {
-                  const isCurrent = aula.id === aulaAtual.id;
-                  const isTravada = (!concluida && aIndex > 0);
-                  
+                {mod.aulas.map((a: any) => {
+                  const isCurrent = a.id === params.aulaId;
                   return (
-                    <li key={aula.id}>
+                    <li key={a.id}>
                       <Link 
-                        href={isTravada ? '#' : `/dashboard/cursos/${cursoMock.id}/aula/${aula.id}`}
+                        href={`/dashboard/cursos/${params.id}/aula/${a.id}`}
                         onClick={() => setMobileMenuOpen(false)}
                         className={`
-                          flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-colors
-                          ${isCurrent ? "bg-primary/20 text-primary-foreground border border-primary/30" : "text-slate-300"}
-                          ${isTravada ? "opacity-40 cursor-not-allowed" : "hover:bg-slate-800"}
+                          flex items-center gap-3 px-4 py-3 rounded-2xl text-[13px] transition-all
+                          ${isCurrent ? "bg-primary text-white shadow-xl shadow-primary/20 font-bold" : "text-slate-400 hover:bg-slate-800/50 hover:text-slate-200 font-medium"}
                         `}
                       >
                         <div className="flex-shrink-0">
-                           {aula.concluida ? (
-                             <CheckCircle2 className="w-4 h-4 text-secondary" />
-                           ) : isTravada ? (
-                             <Lock className="w-4 h-4 text-slate-500" />
+                           {a.concluida ? (
+                             <CheckCircle2 className="w-4 h-4 text-emerald-400" />
                            ) : (
-                             getIconPorTipo(aula.tipo, "w-4", "h-4")
+                             getIconPorTipo(a.tipo, "w-4", "h-4")
                            )}
                         </div>
-                        <span className={`line-clamp-2 ${isCurrent ? "font-bold" : "font-medium"}`}>
-                          {aula.titulo}
-                        </span>
+                        <span className="line-clamp-2">{a.titulo}</span>
                       </Link>
                     </li>
                   );
@@ -302,64 +335,86 @@ export default function AulaPlayerPage({ params }: { params: { id: string, aulaI
         </div>
       </aside>
 
-      {/* ÁREA CENTRAL - PLAYER OU AVALIAÇÃO */}
-      <main className="flex-1 h-[calc(100vh-64px)] md:h-full overflow-y-auto bg-slate-50 dark:bg-slate-950 flex flex-col relative">
-        <div className="flex-1 flex flex-col max-w-5xl mx-auto w-full p-4 md:p-8">
-          
-          <div className="mb-6 flex justify-between items-start">
-            <div>
-               <div className="inline-flex items-center justify-center px-3 py-1 bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-300 rounded-full text-xs font-bold uppercase tracking-wide mb-3 gap-1.5">
-                 {getIconPorTipo(aulaAtual.tipo)} {aulaAtual.tipo}
-               </div>
-               <h1 className="text-2xl md:text-3xl font-black text-slate-900 dark:text-white">
-                 {aulaAtual.titulo}
-               </h1>
-            </div>
-          </div>
+      {/* ÁREA CENTRAL */}
+      <main className="flex-1 flex flex-col relative overflow-hidden bg-slate-50 dark:bg-slate-950">
+        {/* HEADER MOBILE & NAVEGAÇÃO SUPERIOR */}
+        <div className="flex items-center justify-between bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 p-4 md:p-6 z-20 shadow-sm">
+           <button onClick={() => setMobileMenuOpen(true)} className="md:hidden p-2 text-slate-500 hover:bg-slate-50 rounded-xl">
+             <Menu className="w-6 h-6" />
+           </button>
+           <div className="hidden md:flex flex-col">
+              <span className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Aula Atual</span>
+              <h1 className="text-xl font-black text-slate-900 dark:text-white truncate max-w-xl">{aula?.titulo}</h1>
+           </div>
+           <div className="flex gap-2">
+              <button className="p-3 bg-slate-100 dark:bg-slate-800 text-slate-500 rounded-xl hover:bg-slate-200 transition-colors shadow-sm"><ArrowLeft className="w-5 h-5"/></button>
+              <button className="p-3 bg-primary text-white rounded-xl hover:bg-primary/90 transition-colors shadow-md shadow-primary/20"><ArrowRight className="w-5 h-5"/></button>
+           </div>
+        </div>
 
-          {/* RENDERIZADOR: AVALIAÇÃO VS VÍDEO/PDF */}
-          {aulaAtual.tipo === 'atividade' ? (
-             <div className="flex-1 h-full shadow-2xl relative w-full mb-8">
-                <QuizRunner onAprovar={() => setConcluida(true)} />
-             </div>
-          ) : (
-             <div className="w-full aspect-video bg-black rounded-[2rem] overflow-hidden shadow-2xl border border-slate-200 dark:border-slate-800 relative z-0 flex items-center justify-center">
-                 {/* Video Play */}
-             </div>
-          )}
-
-          {/* Rodapé do Player / Navegação */}
-          <div className="mt-auto bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-[2rem] p-6 shadow-sm flex flex-col md:flex-row items-center justify-between gap-6">
-            
-            <div className="flex items-center gap-4 w-full md:w-auto">
-              {concluida ? (
-                <div className="flex items-center gap-2 text-secondary font-bold bg-secondary/10 px-6 py-3.5 rounded-xl border border-secondary/20 w-full justify-center">
-                  <CheckCircle2 className="w-5 h-5" /> Concluída - Liberado!
-                </div>
+        <div className="flex-1 overflow-y-auto p-4 md:p-10 custom-scrollbar">
+           <div className="max-w-5xl mx-auto w-full h-full flex flex-col">
+              
+              {/* RENDERIZADOR DINÂMICO */}
+              {aula?.tipo === 'atividade' ? (
+                 <div className="flex-1 min-h-[500px]">
+                    <QuizRunner 
+                      avaliacao={avaliacao} 
+                      onAprovar={() => handleMarcarConcluido()} 
+                    />
+                 </div>
               ) : (
-                <button 
-                  onClick={marcarComoConcluido}
-                  disabled={loading || aulaAtual.tipo === 'atividade'}
-                  className="w-full md:w-auto flex items-center justify-center gap-2 text-slate-700 dark:text-slate-200 font-bold bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 px-6 py-3.5 rounded-xl transition-all disabled:opacity-50"
-                  title={aulaAtual.tipo === 'atividade' ? 'Responda a atividade no painel acima para concluir.' : ''}
-                >
-                  {loading ? "Registrando..." : "Aprovação Necessária"}
-                </button>
+                 <div className="space-y-8 flex-1">
+                    <div className="w-full aspect-video bg-slate-900 rounded-[2.5rem] overflow-hidden shadow-2xl border-4 border-white dark:border-slate-800 relative group">
+                        {aula?.conteudo_url ? (
+                           <iframe 
+                             src={aula.conteudo_url.replace("watch?v=", "embed/")} 
+                             className="w-full h-full"
+                             allowFullScreen
+                           ></iframe>
+                        ) : (
+                           <div className="flex flex-col items-center justify-center h-full text-slate-700">
+                              <Video className="w-20 h-20 mb-4 opacity-10" />
+                              <p className="font-bold opacity-30">Nenhum vídeo carregado para esta aula.</p>
+                           </div>
+                        )}
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                       <div className="md:col-span-2 space-y-6">
+                          <h2 className="text-2xl font-black text-slate-900 dark:text-white uppercase tracking-tight">Conteúdo de Apoio</h2>
+                          <div className="prose dark:prose-invert max-w-none text-slate-600 dark:text-slate-400 font-medium leading-relaxed">
+                             {aula?.conteudo_texto || "Sem material adicional cadastrado para esta lição."}
+                          </div>
+                       </div>
+                       
+                       <div className="space-y-6">
+                          <h3 className="font-black text-slate-900 dark:text-white uppercase tracking-tight text-sm">Painel de Ação</h3>
+                          <div className="bg-white dark:bg-slate-900 p-6 rounded-[2rem] border border-slate-200 dark:border-slate-800 shadow-sm">
+                             {concluida ? (
+                                <div className="text-center space-y-4">
+                                   <div className="w-16 h-16 bg-emerald-100 dark:bg-emerald-900/30 text-emerald-500 rounded-2xl flex items-center justify-center mx-auto">
+                                      <ShieldCheck className="w-9 h-9" />
+                                   </div>
+                                   <p className="font-black text-emerald-600 dark:text-emerald-400 uppercase tracking-widest text-[11px]">Aula Completada</p>
+                                   <button className="w-full py-4 bg-emerald-500 text-white rounded-2xl font-black shadow-lg shadow-emerald-500/20">Avançar</button>
+                                </div>
+                             ) : (
+                                <button 
+                                   onClick={() => handleMarcarConcluido()}
+                                   disabled={savingProgress}
+                                   className="w-full py-4 bg-primary text-white rounded-2xl font-black shadow-lg shadow-primary/20 flex items-center justify-center gap-2 hover:scale-[1.02] active:scale-95 transition-all"
+                                >
+                                   {savingProgress ? <Loader2 className="w-5 h-5 animate-spin" /> : "Marcar como Concluída"}
+                                </button>
+                             )}
+                          </div>
+                       </div>
+                    </div>
+                 </div>
               )}
-            </div>
 
-            <div className="flex items-center gap-3 w-full md:w-auto">
-              <Link 
-                href={proximaAula.bloqueada ? '#' : `/dashboard/cursos/${cursoMock.id}/aula/${proximaAula.id}`}
-                className={`flex-1 md:flex-none flex items-center justify-center gap-2 px-6 py-3.5 text-sm font-bold rounded-xl transition-all shadow-md
-                  ${proximaAula.bloqueada ? "bg-slate-200 dark:bg-slate-800 text-slate-400 cursor-not-allowed border-transparent" : "bg-primary text-white hover:bg-primary/90"}`}
-              >
-                Gerar Certificado de Fim de Curso
-                {proximaAula.bloqueada ? <Lock className="w-4 h-4 ml-1 opacity-50" /> : <ArrowRight className="w-4 h-4" />}
-              </Link>
-            </div>
-
-          </div>
+           </div>
         </div>
       </main>
 
