@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useParams } from "next/navigation";
 import { 
   PlayCircle, FileText, CheckCircle2, Lock, ArrowLeft, 
   ArrowRight, Menu, X, Video, Paperclip, CheckSquare,
@@ -112,7 +112,11 @@ function QuizRunner({ avaliacao, onAprovar }: { avaliacao: any, onAprovar: (nota
              {q.alternativas.map((alt: any) => {
                const isSelected = respostas[q.id] === alt.id;
                return (
-                 <label key={alt.id} className={`flex items-center gap-5 p-6 rounded-2xl border-2 cursor-pointer transition-all ${isSelected ? 'border-primary bg-primary/5 shadow-md -translate-y-1' : 'border-slate-100 dark:border-slate-800 hover:border-slate-200 dark:hover:border-slate-700'}`}>
+                 <label 
+                   key={alt.id} 
+                   onClick={() => setRespostas({...respostas, [q.id]: alt.id})}
+                   className={`flex items-center gap-5 p-6 rounded-2xl border-2 cursor-pointer transition-all ${isSelected ? 'border-primary bg-primary/5 shadow-md -translate-y-1' : 'border-slate-100 dark:border-slate-800 hover:border-slate-200 dark:hover:border-slate-700'}`}
+                 >
                     <div className={`w-7 h-7 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-all ${isSelected ? 'border-primary bg-primary' : 'border-slate-300 dark:border-slate-700'}`}>
                        {isSelected && <div className="w-3 h-3 bg-white rounded-full"></div>}
                     </div>
@@ -158,8 +162,9 @@ function QuizRunner({ avaliacao, onAprovar }: { avaliacao: any, onAprovar: (nota
 // ==========================================
 // COMPONENTE PRINCIPAL: PLAYER PAGE
 // ==========================================
-export default function AulaPlayerPage({ params }: { params: { id: string, aulaId: string } }) {
+export default function AulaPlayerPage() {
   const router = useRouter();
+  const params = useParams();
   const supabase = createClient();
   
   const [loading, setLoading] = useState(true);
