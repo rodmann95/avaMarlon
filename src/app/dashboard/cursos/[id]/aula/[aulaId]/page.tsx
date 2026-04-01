@@ -365,20 +365,25 @@ export default function AulaPlayerPage({ params }: { params: { id: string, aulaI
                  </div>
               ) : (
                  <div className="space-y-8 flex-1">
-                    <div className="w-full aspect-video bg-slate-900 rounded-[2.5rem] overflow-hidden shadow-2xl border-4 border-white dark:border-slate-800 relative group">
-                        {aula?.conteudo_url ? (
-                           <iframe 
-                             src={aula.conteudo_url.replace("watch?v=", "embed/")} 
-                             className="w-full h-full"
-                             allowFullScreen
-                           ></iframe>
-                        ) : (
-                           <div className="flex flex-col items-center justify-center h-full text-slate-700">
-                              <Video className="w-20 h-20 mb-4 opacity-10" />
-                              <p className="font-bold opacity-30">Nenhum vídeo carregado para esta aula.</p>
-                           </div>
-                        )}
-                    </div>
+                     <div className="w-full aspect-video bg-slate-900 rounded-[2.5rem] overflow-hidden shadow-2xl border-4 border-white dark:border-slate-800 relative group">
+                        {(() => {
+                           const videoUrl = aula?.conteudo_url || "https://youtu.be/IXdNnw99-Ic?list=RDIXdNnw99-Ic";
+                           // Converte links normais e curtos (youtu.be) para embed
+                           let embedUrl = videoUrl
+                             .replace("watch?v=", "embed/")
+                             .replace("youtu.be/", "www.youtube.com/embed/")
+                             .split("&")[0]; // Remove parâmetros extras que podem quebrar o embed simples
+                           
+                           return (
+                             <iframe 
+                               src={embedUrl} 
+                               className="w-full h-full"
+                               allowFullScreen
+                               allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                             ></iframe>
+                           );
+                        })()}
+                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
                        <div className="md:col-span-2 space-y-6">
