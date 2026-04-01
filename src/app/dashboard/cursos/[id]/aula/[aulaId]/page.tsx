@@ -352,8 +352,34 @@ export default function AulaPlayerPage() {
               <h1 className="text-xl font-black text-slate-900 dark:text-white truncate max-w-xl">{aula?.titulo}</h1>
            </div>
            <div className="flex gap-2">
-              <button className="p-3 bg-slate-100 dark:bg-slate-800 text-slate-500 rounded-xl hover:bg-slate-200 transition-colors shadow-sm"><ArrowLeft className="w-5 h-5"/></button>
-              <button className="p-3 bg-primary text-white rounded-xl hover:bg-primary/90 transition-colors shadow-md shadow-primary/20"><ArrowRight className="w-5 h-5"/></button>
+              {(() => {
+                // Flatten all lessons into a single ordered array for navigation
+                const allAulas = modulos.flatMap(m => m.aulas);
+                const currentIndex = allAulas.findIndex(a => a.id === params.aulaId);
+                const prevAula = allAulas[currentIndex - 1];
+                const nextAula = allAulas[currentIndex + 1];
+
+                return (
+                  <>
+                    <button 
+                      onClick={() => prevAula && router.push(`/dashboard/cursos/${params.id}/aula/${prevAula.id}`)}
+                      disabled={!prevAula}
+                      className="p-3 bg-slate-100 dark:bg-slate-800 text-slate-500 rounded-xl hover:bg-slate-200 transition-colors shadow-sm disabled:opacity-30 disabled:cursor-not-allowed"
+                      title="Aula Anterior"
+                    >
+                      <ArrowLeft className="w-5 h-5"/>
+                    </button>
+                    <button 
+                      onClick={() => nextAula && router.push(`/dashboard/cursos/${params.id}/aula/${nextAula.id}`)}
+                      disabled={!nextAula}
+                      className="p-3 bg-primary text-white rounded-xl hover:bg-primary/90 transition-colors shadow-md shadow-primary/20 disabled:opacity-30 disabled:cursor-not-allowed"
+                      title="Próxima Aula"
+                    >
+                      <ArrowRight className="w-5 h-5"/>
+                    </button>
+                  </>
+                );
+              })()}
            </div>
         </div>
 
